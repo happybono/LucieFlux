@@ -1,0 +1,9 @@
+<Solution>
+  <Configurations>
+    <Platform Name="Any CPU" />
+    <Platform Name="x64" />
+  </Configurations>
+  <Project Path="BeamPositionStability/BeamPositionStability.csproj" Id="6438f71a-44e9-46d1-9336-ccf39b7ac6a7">
+    <Platform Solution="*|x64" Project="x64" />
+  </Project>
+</Solution>

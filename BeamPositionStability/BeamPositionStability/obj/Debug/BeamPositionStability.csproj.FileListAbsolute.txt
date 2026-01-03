@@ -1,0 +1,10 @@
+C:\Users\HappyBono\source\repos\BeamPositionStability\BeamPositionStability\bin\Debug\BeamPositionStability.exe.config
+C:\Users\HappyBono\source\repos\BeamPositionStability\BeamPositionStability\bin\Debug\BeamPositionStability.exe
+C:\Users\HappyBono\source\repos\BeamPositionStability\BeamPositionStability\bin\Debug\BeamPositionStability.pdb
+C:\Users\HappyBono\source\repos\BeamPositionStability\BeamPositionStability\obj\Debug\BeamPositionStability.csproj.AssemblyReference.cache
+C:\Users\HappyBono\source\repos\BeamPositionStability\BeamPositionStability\obj\Debug\BeamPositionStability.Properties.Resources.resources
+C:\Users\HappyBono\source\repos\BeamPositionStability\BeamPositionStability\obj\Debug\BeamPositionStability.csproj.GenerateResource.cache
+C:\Users\HappyBono\source\repos\BeamPositionStability\BeamPositionStability\obj\Debug\BeamPositionStability.csproj.CoreCompileInputs.cache
+C:\Users\HappyBono\source\repos\BeamPositionStability\BeamPositionStability\obj\Debug\BeamPositionStability.exe
+C:\Users\HappyBono\source\repos\BeamPositionStability\BeamPositionStability\obj\Debug\BeamPositionStability.pdb
+C:\Users\HappyBono\source\repos\BeamPositionStability\BeamPositionStability\obj\Debug\BeamPositionStability.FrmMain.resources
