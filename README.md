@@ -12,11 +12,27 @@ It supports drag-and-drop / paste of text or files containing point data, then c
   - Azimuth (principal axis angle)
   - `ΔX`, `ΔY`, and `Δ`
 
+<br>
+
+<div align="center">
+<img alt="GitHub Last Commit" src="https://img.shields.io/github/last-commit/happybono/LucidFlux"> 
+<img alt="GitHub Repo Size" src="https://img.shields.io/github/repo-size/happybono/LucidFlux">
+<img alt="GitHub Repo Languages" src="https://img.shields.io/github/languages/count/happybono/LucidFlux">
+<img alt="GitHub Top Languages" src="https://img.shields.io/github/languages/top/happybono/LucidFlux">
+</div>
+
+<br>
+
+## What's New
+### v1.0.0.0
+#### January 04, 2026
+> Initial release.
+
 ## Required Components & Setup
 - Target framework: **.NET Framework 4.8.1**
 - Language version: **C# 7.3**
 
-## Quick Start
+### Initial Setup
 - Clone or download the repository.
 - Open the solution file (.slnx) in Visual Studio.
 - Add necessary references if required.
