@@ -128,9 +128,6 @@ Given the selected subset of points :
 
 Angle units can be displayed in radians or degrees.
 
-## Limits
-- Max stored points : **5000**
-
 ## References
 > The UI label "Last 1000 values (ISO Standard)" suggests alignment with an ISO evaluation convention.
 
