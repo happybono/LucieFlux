@@ -13,13 +13,14 @@ namespace BeamPositionStability
 {
     public partial class FrmMain : Form
     {
-        private const int MaxPoints = 5000;
+        // private const int DefaultPointsCapacity = 5000;
 
         private static readonly DateTime UnixEpochUtc = new DateTime(1970, 1, 1, 0, 0, 0, DateTimeKind.Utc);
         private const long MicrosecPerSecond = 1_000_000;
         private const long TicksPerMicrosec = 10; // 1 tick = 100 ns
 
-        private readonly List<PointD> _points = new List<PointD>(MaxPoints);
+        // private readonly List<PointD> _points = new List<PointD>(5000);
+        private readonly List<PointD> _points = new List<PointD>();
 
         private double[] _xpCache = Array.Empty<double>();
         private double[] _ypCache = Array.Empty<double>();
@@ -40,10 +41,23 @@ namespace BeamPositionStability
 
         private void lvPoints_DragEnter(object sender, DragEventArgs e)
         {
-            if (e.Data.GetDataPresent(DataFormats.Text) || e.Data.GetDataPresent(DataFormats.FileDrop))
+            if (e.Data.GetDataPresent(DataFormats.Text))
+            {
                 e.Effect = DragDropEffects.Copy;
-            else
-                e.Effect = DragDropEffects.None;
+                return;
+            }
+
+            if (e.Data.GetDataPresent(DataFormats.FileDrop))
+            {
+                var files = e.Data.GetData(DataFormats.FileDrop) as string[];
+                if (files != null && files.Length > 0 && files.All(f => string.Equals(Path.GetExtension(f), ".csv", StringComparison.OrdinalIgnoreCase)))
+                {
+                    e.Effect = DragDropEffects.Copy;
+                    return;
+                }
+            }
+
+            e.Effect = DragDropEffects.None;
         }
 
         private void lvPoints_DragDrop(object sender, DragEventArgs e)
@@ -60,6 +74,11 @@ namespace BeamPositionStability
                 else if (e.Data.GetDataPresent(DataFormats.FileDrop))
                 {
                     var files = (string[])e.Data.GetData(DataFormats.FileDrop);
+
+                    // only accept .csv files.
+                    if (!files.All(f => string.Equals(Path.GetExtension(f), ".csv", StringComparison.OrdinalIgnoreCase)))
+                        return;
+
                     foreach (var file in files)
                     {
                         string text = File.ReadAllText(file);
@@ -83,11 +102,9 @@ namespace BeamPositionStability
 
         private void AddPoints(IEnumerable<PointD> points)
         {
-            foreach (var p in points)
-            {
-                if (_points.Count >= MaxPoints) break;
-                _points.Add(p);
-            }
+            _points.AddRange(points);
+
+            EnsureCacheCapacity(_points.Count);
 
             UpdateListView();
             ToggleTimeCtrls();
@@ -116,7 +133,7 @@ namespace BeamPositionStability
 
         private void UpdateUI()
         {
-            Text = $"Beam Stability Demo - Points : {_points.Count}/{MaxPoints}";
+            Text = $"Beam Stability Demo - Points : {_points.Count}";
         }
 
         private IEnumerable<PointD> ParsePointsFromText(string text)
@@ -659,6 +676,7 @@ namespace BeamPositionStability
                 lblDeltaX.Text = "-";
                 lblDeltaY.Text = "-";
                 lblDelta.Text = "-";
+
                 return;
             }
 
@@ -925,7 +943,7 @@ namespace BeamPositionStability
             Recalculate();
         }
 
-        private void Form1_Load(object sender, EventArgs e)
+        private void FrmMain_Load(object sender, EventArgs e)
         {
             AutoFitColumns();
 
@@ -936,6 +954,7 @@ namespace BeamPositionStability
             }
 
             rbtnRad.Checked = true;
+            chkOpenBeforeSave.Checked = true;
 
             ToggleTimeCtrls();
             Recalculate();
@@ -1062,6 +1081,11 @@ namespace BeamPositionStability
             FitColumns();
         }
 
+        private void exportAsExcelToolStripMenuItem_Click(object sender, EventArgs e)
+        {
+            btnExport.PerformClick();
+        }
+
         private void btnExport_Click(object sender, EventArgs e)
         {
             try
@@ -1140,9 +1164,6 @@ namespace BeamPositionStability
             string totalText = lblTotal.Text;
             string consideredText = lblConsidered.Text;
 
-            // Rules :
-            // - chkOpenAfterSave.Checked == true  => do NOT show SaveFileDialog; show Excel UI so user can save manually
-            // - chkOpenAfterSave.Checked == false => current behavior (SaveFileDialog + save + close)
             bool openAfterSave = chkOpenBeforeSave.Checked;
 
             string savePath = null;
@@ -1167,7 +1188,7 @@ namespace BeamPositionStability
 
             const int ExcelMaxRows = 1_048_576;
             const int dataStartRow = 4;
-            int maxRowsPerColumn = ExcelMaxRows - (dataStartRow - 1); // row 4 .. 1,048,576 => 1,048,573
+            int maxRowsPerColumn = ExcelMaxRows - (dataStartRow - 1);
 
             var coms = new Stack<object>();
 
@@ -1218,28 +1239,32 @@ namespace BeamPositionStability
                 ws.Cells[14, 1] = "Count : " + totalText;
                 ws.Cells[15, 1] = "Count (Considered) : " + consideredText;
 
-                // Data columns : 1 blank column between each logical block; with spill to next columns when row limit exceeded
                 int baseCol = 3;
-                int n = _points.Count;
+
+                bool exportConsideredOnly = chkExportConsideredOnly.Checked;
+                int dataStartIndex = exportConsideredOnly ? start : 0;
+                int nData = exportConsideredOnly ? considered : _points.Count;
 
                 int indexStartCol = baseCol;
                 WriteColumnHeader(ws, indexStartCol, "Index");
-                int lastIndexCol = WriteIntColumn(ws, indexStartCol, dataStartRow, n, maxRowsPerColumn, i => i + 1);
+                int lastIndexCol = WriteIntColumn(ws, indexStartCol, dataStartRow, nData, maxRowsPerColumn, i => (dataStartIndex + i) + 1);
 
-                int timestampStartCol = lastIndexCol + 2; // + 1 gap
+                int timestampStartCol = lastIndexCol + 2;
                 WriteColumnHeader(ws, timestampStartCol, "Timestamp");
-                int lastTsCol = WriteStringColumn(ws, timestampStartCol, dataStartRow, n, maxRowsPerColumn, i => _points[i].TimestampText ?? string.Empty);
+                int lastTsCol = WriteStringColumn(ws, timestampStartCol, dataStartRow, nData, maxRowsPerColumn, i => _points[dataStartIndex + i].TimestampText ?? string.Empty);
 
-                int xStartCol = lastTsCol + 2; // + 1 gap
+                int xStartCol = lastTsCol + 2;
                 WriteColumnHeader(ws, xStartCol, "X");
-                int lastXCol = WriteDoubleColumn(ws, xStartCol, dataStartRow, n, maxRowsPerColumn, i => _points[i].X);
+                int lastXCol = WriteDoubleColumn(ws, xStartCol, dataStartRow, nData, maxRowsPerColumn, i => _points[dataStartIndex + i].X);
 
-                int yStartCol = lastXCol + 2; // + 1 gap
+                int yStartCol = lastXCol + 2;
                 WriteColumnHeader(ws, yStartCol, "Y");
-                int lastYCol = WriteDoubleColumn(ws, yStartCol, dataStartRow, n, maxRowsPerColumn, i => _points[i].Y);
+                int lastYCol = WriteDoubleColumn(ws, yStartCol, dataStartRow, nData, maxRowsPerColumn, i => _points[dataStartIndex + i].Y);
 
-                // Ordered series arrays
-                var order = Enumerable.Range(0, n);
+                // Chart helper columns are ALWAYS based on the considered range
+                int nChart = considered;
+
+                IEnumerable<int> order = Enumerable.Range(start, nChart);
                 if (allHaveTimestamp)
                 {
                     order = order
@@ -1247,35 +1272,39 @@ namespace BeamPositionStability
                         .ThenBy(i => i);
                 }
 
-                var xOrdered = new object[n, 1];
-                var yOrdered = new object[n, 1];
+                var idxOrdered = new object[nChart, 1];
+                var xOrdered = new object[nChart, 1];
+                var yOrdered = new object[nChart, 1];
 
                 int k = 0;
                 foreach (int i in order)
                 {
+                    idxOrdered[k, 0] = i + 1; // absolute 1-based index in the original list
                     xOrdered[k, 0] = _points[i].X;
                     yOrdered[k, 0] = _points[i].Y;
                     k++;
                 }
 
-                int helperXCol = lastYCol + 2; // + 1 gap after last main data block
-                WriteColumnHeader(ws, helperXCol, allHaveTimestamp ? "X (ordered by Timestamp)" : "X (ordered by Index)");
-                int lastHelperXCol = WriteObjectColumn(ws, helperXCol, dataStartRow, xOrdered, n, maxRowsPerColumn);
+                int helperIndexCol = lastYCol + 4;
+                WriteColumnHeader(ws, helperIndexCol, allHaveTimestamp ? "Index (ordered by Timestamp) (Considered)" : "Index (ordered by Index) (Considered)");
+                int lastHelperIndexCol = WriteObjectColumn(ws, helperIndexCol, dataStartRow, idxOrdered, nChart, maxRowsPerColumn);
 
-                int helperYCol = lastHelperXCol + 2; // + 1 gap between ordered X and ordered Y
-                WriteColumnHeader(ws, helperYCol, allHaveTimestamp ? "Y (ordered by Timestamp)" : "Y (ordered by Index)");
-                int lastHelperYCol = WriteObjectColumn(ws, helperYCol, dataStartRow, yOrdered, n, maxRowsPerColumn);
+                int helperXCol = lastHelperIndexCol + 2;
+                WriteColumnHeader(ws, helperXCol, allHaveTimestamp ? "X (ordered by Timestamp) (Considered)" : "X (ordered by Index) (Considered)");
+                int lastHelperXCol = WriteObjectColumn(ws, helperXCol, dataStartRow, xOrdered, nChart, maxRowsPerColumn);
 
-                // Build union ranges across spilled columns (starts at helperXCol / helperYCol respectively)
+                int helperYCol = lastHelperXCol + 2;
+                WriteColumnHeader(ws, helperYCol, allHaveTimestamp ? "Y (ordered by Timestamp) (Considered)" : "Y (ordered by Index) (Considered)");
+                int lastHelperYCol = WriteObjectColumn(ws, helperYCol, dataStartRow, yOrdered, nChart, maxRowsPerColumn);
+
                 Excel.Range xUnion = null;
                 Excel.Range yUnion = null;
 
                 try
                 {
-                    xUnion = BuildDataUnionRange(excel, ws, dataStartRow, n, helperXCol, maxRowsPerColumn);
-                    yUnion = BuildDataUnionRange(excel, ws, dataStartRow, n, helperYCol, maxRowsPerColumn);
+                    xUnion = BuildDataUnionRange(excel, ws, dataStartRow, nChart, helperXCol, maxRowsPerColumn);
+                    yUnion = BuildDataUnionRange(excel, ws, dataStartRow, nChart, helperYCol, maxRowsPerColumn);
 
-                    // Chart position : MUST be 3 columns after the LAST column used by Y ordered (including its spill)
                     int chartColBase = lastHelperYCol + 4;
                     int chartRowBase = 4;
 
@@ -1301,7 +1330,7 @@ namespace BeamPositionStability
                     chart = chartObj.Chart;
                     coms.Push(chart);
 
-                    chart.ChartType = Excel.XlChartType.xlXYScatterLines; // Scatter with Lines and Markers
+                    chart.ChartType = Excel.XlChartType.xlXYScatterLines;
                     chart.HasTitle = true;
                     chart.ChartTitle.Text = titleText;
 
@@ -1319,7 +1348,7 @@ namespace BeamPositionStability
                     var series = seriesCollection.NewSeries();
                     try
                     {
-                        series.Name = allHaveTimestamp ? "Trajectory (Timestamp order)" : "Trajectory (Index order)";
+                        series.Name = allHaveTimestamp ? "Trajectory (Timestamp order, Considered)" : "Trajectory (Index order, Considered)";
                         series.XValues = xUnion;
                         series.Values = yUnion;
                         series.MarkerStyle = Excel.XlMarkerStyle.xlMarkerStyleCircle;
@@ -1335,6 +1364,7 @@ namespace BeamPositionStability
                     FinalRelease(yUnion);
                     FinalRelease(xUnion);
                 }
+
                 if (openAfterSave)
                 {
                     wb.Saved = false;
