@@ -1,5 +1,5 @@
-# LuciaFlux
-**LuciaFlux** is a Windows Forms utility to evaluate **beam position stability** from a sequence of measured centroid points `(X, Y)` (optionally with timestamps).
+# LucieFlux
+**LucieFlux** is a Windows Forms utility to evaluate **beam position stability** from a sequence of measured centroid points `(X, Y)` (optionally with timestamps).
 It supports drag-and-drop / paste of text or files containing point data, then computes centroid, azimuth (principal axis), and stability metrics.
 
 ## Features
