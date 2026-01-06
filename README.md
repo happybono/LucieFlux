@@ -137,5 +137,5 @@ Angle units can be displayed in radians or degrees.
 - **ISO-11147 (series)** : Lasers and laser-related equipment  
   Test methods for laser beam parameters.
 
-- **ISO-11670 (series)** : Lasers and laser-related equipment
+- **ISO-11670 (series)** : Lasers and laser-related equipment  
   Test methods for laser beam parameters - Beam positional stability
